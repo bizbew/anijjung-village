@@ -1,16 +1,21 @@
 import './style.css';
 import { setupResources } from './resources-ui.js';
-import { households, waterReserveDays } from './households.js';
+import { waterReserveDays } from './households.js';
+import { loadNetwork, networkHouseholds } from './network-store.js';
+import { setupNetworkPages, escape } from './network-pages.js';
 import { createVillage } from './scene.js';
+const households = networkHouseholds(loadNetwork());
 
 const app = document.querySelector('#app');
 app.innerHTML = `
+  <nav class="site-nav" aria-label="เมนูหลัก"><a class="nav-brand" href="#">ANIJJUNG NETWORK</a><button id="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="เปิดเมนู">☰</button><div id="nav-links"><a href="#who-we-are">WHO WE ARE</a><a href="#join">JOIN A NETWORK</a><a href="#sharing">SHARING</a></div></nav>
+  <main id="network-page" class="network-page" hidden></main>
   <main class="explorer">
     <div id="scene" role="region" aria-label="ฉากหมู่บ้านจำลองสามมิติ"></div>
     <header class="intro"><div class="eyebrow"><span></span> ANIJJUNG / CONCEPT 01</div>
       <h1>Anijjung<br>Village Explorer</h1>
       <p class="subtitle">สำรวจหมู่บ้านจำลองเพื่อวางแผนอาหาร น้ำ และพลังงาน</p>
-      <p class="concept">ต้นแบบแนวคิด • หมู่บ้านและข้อมูลครัวเรือนเป็นข้อมูลจำลอง</p>
+      <p class="concept">ต้นแบบแนวคิด • หมู่บ้านจำลอง • บ้านเริ่มต้นใช้ข้อมูลจำลอง</p>
     </header>
     <div class="toolbar"><button id="open-resources" aria-controls="resources" aria-expanded="false">แหล่งช่วยเหลือและเรียนรู้</button><label class="toggle"><input id="sharing" type="checkbox"><span class="switch"></span>แสดงเครือข่ายแบ่งปัน</label><button id="reset">↺ กลับมุมเริ่มต้น</button></div>
     <aside id="resources" class="details resources" aria-labelledby="resources-title" hidden></aside>
@@ -33,9 +38,9 @@ function selectHouse(id) {
   const panel = document.querySelector('#details');
   panel.hidden = false;
   panel.innerHTML = `<div class="panel-head"><span class="eyebrow">HOUSEHOLD / ${h.id}</span><button id="close" aria-label="ปิดรายละเอียด">ปิดรายละเอียด ×</button></div>
-    <h2>บ้าน ${h.id}</h2><p class="residents">ครัวเรือน ${h.id} <span>·</span> ผู้อยู่อาศัย ${h.residents} คน</p>
-    <div class="reserve"><span>ระยะเวลาสำรองน้ำ</span><strong>${days === null ? 'ยังคำนวณไม่ได้' : `${number(days)} <small>วัน</small>`}</strong><small>ประมาณการจากข้อมูลจำลอง</small></div>
-    <dl><div><dt>น้ำที่เก็บไว้</dt><dd>${number(h.waterLitres)} ลิตร</dd></div><div><dt>ใช้น้ำรวมทั้งครัวเรือน</dt><dd>${number(h.dailyWaterLitres)}${h.dailyWaterLitres === null ? '' : ' ลิตร/วัน'}</dd></div><div><dt>อาหารสำรอง</dt><dd>${h.foodDays} วัน</dd></div><div><dt>ผลิตไฟฟ้าจากโซลาร์ (ตัวอย่าง)</dt><dd>${number(h.solarKwh)} kWh/วัน</dd></div><div><dt>ใช้ไฟฟ้าทั้งครัวเรือน</dt><dd>${number(h.electricityKwh)} kWh/วัน</dd></div></dl>
+    <h2>บ้าน ${h.id}</h2>${h.local ? `<p class="local-house">${escape(h.name)} · ${escape(h.area)}<br>ข้อมูลที่คุณกรอก · ตำแหน่งในผังสมมติ</p>` : ''}<p class="residents">ครัวเรือน ${h.id} <span>·</span> ผู้อยู่อาศัย ${h.residents} คน</p>
+    <div class="reserve"><span>ระยะเวลาสำรองน้ำ</span><strong>${days === null ? 'ยังคำนวณไม่ได้' : `${number(days)} <small>วัน</small>`}</strong><small>${h.local ? 'ประมาณการจากข้อมูลที่คุณกรอก' : 'ประมาณการจากข้อมูลจำลอง'}</small></div>
+    <dl><div><dt>น้ำที่เก็บไว้</dt><dd>${number(h.waterLitres)} ลิตร</dd></div><div><dt>ใช้น้ำรวมทั้งครัวเรือน</dt><dd>${number(h.dailyWaterLitres)}${h.dailyWaterLitres === null ? '' : ' ลิตร/วัน'}</dd></div><div><dt>อาหารสำรอง</dt><dd>${number(h.foodDays)}${h.foodDays === null ? '' : ' วัน'}</dd></div><div><dt>ผลิตไฟฟ้าจากโซลาร์ (ตัวอย่าง)</dt><dd>${number(h.solarKwh)} kWh/วัน</dd></div><div><dt>ใช้ไฟฟ้าทั้งครัวเรือน</dt><dd>${number(h.electricityKwh)} kWh/วัน</dd></div></dl>
     <div class="sharing-status ${h.sharing ? 'active' : ''}"><span>●</span> ${h.sharing ? 'สนใจแบ่งปัน' : 'ยังไม่เปิดแบ่งปัน'}</div>
     <p class="caution">น้ำสำรอง ÷ การใช้น้ำรวมต่อวัน เป็นเพียงประมาณการ ไม่ยืนยันว่าน้ำดื่มได้ ตัวเลขโซลาร์รายวันไม่ยืนยันว่าจะใช้ไฟฟ้าได้เมื่อไฟดับ</p>`;
   document.querySelector('#close').onclick = closeDetails;
@@ -45,7 +50,7 @@ function closeDetails() {
   village?.select(null);
   document.querySelectorAll('[data-house]').forEach(b => b.setAttribute('aria-pressed', 'false'));
 }
-try { village = createVillage(document.querySelector('#scene'), selectHouse, resourcePanel.open); }
+try { village = createVillage(document.querySelector('#scene'), selectHouse, resourcePanel.open, households); }
 catch (error) { console.error(error); document.querySelector('#fallback').hidden = false; }
 document.querySelector('#reset').onclick = () => village?.reset();
 document.querySelector('#sharing').onchange = event => {
@@ -54,3 +59,5 @@ document.querySelector('#sharing').onchange = event => {
 };
 document.querySelectorAll('[data-house]').forEach(button => button.onclick = () => selectHouse(button.dataset.house));
 document.addEventListener('keydown', event => { if (event.key === 'Escape') { closeDetails(); resourcePanel.close(); } });
+
+setupNetworkPages();

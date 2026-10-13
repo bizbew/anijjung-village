@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { households } from './households.js';
+import { households as sampleHouseholds } from './households.js';
 import { addLandscape } from './landscape.js';
 
-export function createVillage(container, onSelect, onResources = () => {}) {
+export function createVillage(container, onSelect, onResources = () => {}, households = sampleHouseholds) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#e2e0cf');
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 150);
@@ -67,7 +67,7 @@ export function createVillage(container, onSelect, onResources = () => {}) {
     const [x, z] = h.position;
     const group = new THREE.Group(); group.position.set(x, 0, z); scene.add(group);
     box(group, wood, 0, 0.22, 0, 3.6, 0.4, 2.8);
-    const index = Number(h.id) - 1;
+    const index = (Number(h.id) - 1) % 5;
     const walls = material(['#e7d7b5','#c4c1a2','#d7b899','#dce0c3','#c5d0bf'][index]);
     const houseRoof = material(['#234638','#405949','#715447','#3d5660','#4e6046'][index]);
     box(group, walls, 0, 1.35, 0, 3.1, 2, 2.4);
@@ -157,12 +157,14 @@ export function createVillage(container, onSelect, onResources = () => {}) {
   window.addEventListener('pointerup', event => { pointers.delete(event.pointerId); if (!pointers.size) down = null; });
   const observer = new ResizeObserver(() => {
     const { width, height } = container.getBoundingClientRect();
+    if (!width || !height) return;
     renderer.setSize(width, height); camera.aspect = width / height; camera.fov = width < 760 ? 65 : 38; camera.updateProjectionMatrix();
   }); observer.observe(container);
   // Buildings and planting are static: calculate their shadows once.
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
   renderer.setAnimationLoop(() => {
+    if (!container.offsetWidth) return;
     controls.update();
     // Clamp the panning target while preserving the camera offset.
     const clamped = controls.target.clone(); clamped.x = THREE.MathUtils.clamp(clamped.x, -5, 5); clamped.z = THREE.MathUtils.clamp(clamped.z, -5, 5); clamped.y = 0;
