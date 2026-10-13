@@ -1,4 +1,5 @@
 import './style.css';
+import { setupResources } from './resources-ui.js';
 import { households, waterReserveDays } from './households.js';
 import { createVillage } from './scene.js';
 
@@ -9,9 +10,10 @@ app.innerHTML = `
     <header class="intro"><div class="eyebrow"><span></span> ANIJJUNG / CONCEPT 01</div>
       <h1>Anijjung<br>Village Explorer</h1>
       <p class="subtitle">สำรวจหมู่บ้านจำลองเพื่อวางแผนอาหาร น้ำ และพลังงาน</p>
-      <p class="concept">ต้นแบบแนวคิด • ข้อมูลทั้งหมดเป็นข้อมูลจำลอง</p>
+      <p class="concept">ต้นแบบแนวคิด • หมู่บ้านและข้อมูลครัวเรือนเป็นข้อมูลจำลอง</p>
     </header>
-    <div class="toolbar"><label class="toggle"><input id="sharing" type="checkbox"><span class="switch"></span>แสดงเครือข่ายแบ่งปัน</label><button id="reset">↺ กลับมุมเริ่มต้น</button></div>
+    <div class="toolbar"><button id="open-resources" aria-controls="resources" aria-expanded="false">แหล่งช่วยเหลือและเรียนรู้</button><label class="toggle"><input id="sharing" type="checkbox"><span class="switch"></span>แสดงเครือข่ายแบ่งปัน</label><button id="reset">↺ กลับมุมเริ่มต้น</button></div>
+    <aside id="resources" class="details resources" aria-labelledby="resources-title" hidden></aside>
     <aside id="details" class="details" aria-label="รายละเอียดครัวเรือน" hidden></aside>
     <div class="village-key"><span class="key-icon">⌂</span><div><strong>พื้นที่เล็ก ๆ เพื่อสำรวจร่วมกัน</strong><p>เลือกบ้านเพื่อดูอาหาร น้ำ และพลังงาน</p><div class="house-list">${households.map(h => `<button data-house="${h.id}" aria-label="ดูรายละเอียดบ้าน ${h.id}">${h.id}</button>`).join('')}</div></div></div>
     <footer><span>ลากเพื่อหมุน • เลื่อน / จีบเพื่อซูม • คลิกขวาลาก / สองนิ้วเพื่อเลื่อน</span><span class="layout-note">ผังสมมติเชิงแนวคิด • ไม่ใช่ผังรับรองทางวิศวกรรม</span></footer>
@@ -19,10 +21,12 @@ app.innerHTML = `
     <div id="fallback" class="fallback" hidden>อุปกรณ์นี้ไม่สามารถแสดงฉาก 3D ได้ เลือกหมายเลขบ้านด้านล่างเพื่ออ่านข้อมูลครัวเรือน</div>
   </main>`;
 let village;
+const resourcePanel = setupResources(closeDetails);
 const number = value => Number.isFinite(value) ? value.toLocaleString('th-TH', { maximumFractionDigits: 1 }) : 'ยังไม่มีข้อมูล';
 function selectHouse(id) {
   const h = households.find(h => h.id === id);
   if (!h) return;
+  resourcePanel.close(false);
   village?.select(id);
   document.querySelectorAll('[data-house]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.house === id)));
   const days = waterReserveDays(h);
@@ -41,7 +45,7 @@ function closeDetails() {
   village?.select(null);
   document.querySelectorAll('[data-house]').forEach(b => b.setAttribute('aria-pressed', 'false'));
 }
-try { village = createVillage(document.querySelector('#scene'), selectHouse); }
+try { village = createVillage(document.querySelector('#scene'), selectHouse, resourcePanel.open); }
 catch (error) { console.error(error); document.querySelector('#fallback').hidden = false; }
 document.querySelector('#reset').onclick = () => village?.reset();
 document.querySelector('#sharing').onchange = event => {
@@ -49,4 +53,4 @@ document.querySelector('#sharing').onchange = event => {
   document.querySelector('#network-note').hidden = !event.target.checked;
 };
 document.querySelectorAll('[data-house]').forEach(button => button.onclick = () => selectHouse(button.dataset.house));
-document.addEventListener('keydown', event => { if (event.key === 'Escape') closeDetails(); });
+document.addEventListener('keydown', event => { if (event.key === 'Escape') { closeDetails(); resourcePanel.close(); } });

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { households } from './households.js';
 
-export function createVillage(container, onSelect) {
+export function createVillage(container, onSelect, onResources = () => {}) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#e2e0cf');
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 150);
@@ -90,7 +90,8 @@ export function createVillage(container, onSelect) {
   for (const x of [-1.35, 1.35]) for (const z of [-0.15, 2.15]) box(scene, wood, x, 1.2, z, 0.17, 2.2, 0.17);
   const pavilionRoof = mesh(new THREE.ConeGeometry(2.8, 1.3, 4), roof, scene, 0, 2.8, 1); pavilionRoof.rotation.y = Math.PI / 4;
   box(scene, wood, 0, 0.65, 1, 1.4, 0.15, 0.85);
-  label('ศาลาส่วนกลาง', scene, 0, 4, 1);
+  label('ศาลา · แหล่งเรียนรู้', scene, 0, 4, 1);
+  pavilionRoof.userData.resources = true; pickable.push(pavilionRoof);
   const pond = mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.06, 32), material('#789d9b'), scene, -1.5, 0.05, 9); pond.scale.z = 0.65;
   const pondEdge = mesh(new THREE.TorusGeometry(2.55, 0.16, 6, 40), material('#c6b99a'), scene, -1.5, 0.08, 9); pondEdge.rotation.x = Math.PI / 2; pondEdge.scale.y = 0.65;
   for (const [x, z, scale] of [[-11, 1, 1.2], [-10, -7, 1], [10, -7, 1.3], [11, 3, 1], [3, 11, 1.1], [-9, 8, 1.2], [3, -11, 1]]) {
@@ -121,7 +122,8 @@ export function createVillage(container, onSelect) {
     if (event.button === 0 && down && !moved && pointers.size === 0) {
       const rect = renderer.domElement.getBoundingClientRect();
       raycaster.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1), camera);
-      const hit = raycaster.intersectObjects(pickable)[0]; if (hit) onSelect(hit.object.userData.houseId);
+      const hit = raycaster.intersectObjects(pickable)[0]; if (hit?.object.userData.resources) onResources();
+      else if (hit) onSelect(hit.object.userData.houseId);
     }
     if (pointers.size === 0) down = null;
   });
