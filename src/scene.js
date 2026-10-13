@@ -4,9 +4,6 @@ import { households as sampleHouseholds } from './households.js';
 import { addLandscape } from './landscape.js';
 
 export function createVillage(container, onSelect, onResources = () => {}, households = sampleHouseholds) {
-  const large = households.length > 9;
-  const scale = large ? 1.8 : 1;
-  const events = new AbortController();
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#e2e0cf');
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 150);
@@ -17,16 +14,14 @@ export function createVillage(container, onSelect, onResources = () => {}, house
   renderer.setClearColor('#e2e0cf');
   container.appendChild(renderer.domElement);
   renderer.domElement.setAttribute('aria-label', 'หมู่บ้านจำลอง ลากเพื่อหมุน เลือกบ้านจากฉากหรือปุ่มหมายเลขบ้าน');
-  let needsRender = true;
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.addEventListener('change', () => { needsRender = true; });
   controls.enableDamping = true;
-  controls.minDistance = 20; controls.maxDistance = 60 * scale;
+  controls.minDistance = 20; controls.maxDistance = 60;
   controls.maxPolarAngle = Math.PI / 2.45;
   controls.minPolarAngle = Math.PI / 9;
   controls.panSpeed = 0.6;
   controls.target.set(0, 0, 0);
-  const home = new THREE.Vector3(29, 29, 34).multiplyScalar(scale);
+  const home = new THREE.Vector3(29, 29, 34);
   function reset() { camera.position.copy(home); controls.target.set(0, 0, 0); controls.update(); }
   reset();
   scene.add(new THREE.HemisphereLight(0xfff7e5, 0x7e9388, 2.1));
@@ -34,7 +29,7 @@ export function createVillage(container, onSelect, onResources = () => {}, house
   sun.position.set(-10, 22, 10); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
   sun.shadow.radius = 4;
-  Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30 });
+  Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22 });
   sun.shadow.normalBias = 0.05; scene.add(sun);
   const materials = new Map();
   const material = color => {
@@ -47,12 +42,12 @@ export function createVillage(container, onSelect, onResources = () => {}, house
     const m = new THREE.Mesh(geometry, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
   }
   function box(parent, mat, x, y, z, w, h, d) { return mesh(new THREE.BoxGeometry(w, h, d), mat, parent, x, y, z); }
-  mesh(new THREE.CylinderGeometry(15.5 * scale, 15.7 * scale, 0.7, 64), material('#a6b387'), scene, 0, -0.4, 0);
+  mesh(new THREE.CylinderGeometry(15.5, 15.7, 0.7, 64), material('#a6b387'), scene, 0, -0.4, 0);
   mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({ color: '#e2e0cf' }), scene, 0, -0.82, 0).rotation.x = -Math.PI / 2;
   // Footpaths join the central pavilion and the five front doors.
   function path(x, z, endX, endZ) {
     const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(x,.025,z), new THREE.Vector3(x * .65 + .6,.025,endZ + (z-endZ)*.35), new THREE.Vector3(endX,.025,endZ));
-    const points = curve.getPoints(large ? 8 : 22);
+    const points = curve.getPoints(22);
     for (let i=0;i<points.length-1;i++) {
       const a=points[i], b=points[i+1], mid=a.clone().add(b).multiplyScalar(.5);
       const p=box(scene,pathMat,mid.x,.025,mid.z,.85,.07,a.distanceTo(b)+.06);
@@ -72,7 +67,7 @@ export function createVillage(container, onSelect, onResources = () => {}, house
     const [x, z] = h.position;
     const group = new THREE.Group(); group.position.set(x, 0, z); scene.add(group);
     box(group, wood, 0, 0.22, 0, 3.6, 0.4, 2.8);
-    const index = households.indexOf(h) % 5;
+    const index = (Number(h.id) - 1) % 5;
     const walls = material(['#e7d7b5','#c4c1a2','#d7b899','#dce0c3','#c5d0bf'][index]);
     const houseRoof = material(['#234638','#405949','#715447','#3d5660','#4e6046'][index]);
     box(group, walls, 0, 1.35, 0, 3.1, 2, 2.4);
@@ -127,14 +122,12 @@ export function createVillage(container, onSelect, onResources = () => {}, house
   box(scene, wood, 0, 0.65, 1, 1.4, 0.15, 0.85);
   label('ศาลา · แหล่งเรียนรู้', scene, 0, 4, 1);
   pavilionRoof.userData.resources = true; pickable.push(pavilionRoof);
-  const pond = mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.06, 32), new THREE.MeshStandardMaterial({color:'#719d98',roughness:.28,metalness:.12}), scene, -1.5 * scale, 0.05, 9 * scale); pond.scale.set(scale, 1, .65 * scale);
-  const pondEdge = mesh(new THREE.TorusGeometry(2.55, 0.16, 6, 40), material('#c6b99a'), scene, -1.5 * scale, 0.08, 9 * scale); pondEdge.rotation.x = Math.PI / 2; pondEdge.scale.set(scale, .65 * scale, 1);
-  const landscape = new THREE.Group(); scene.add(landscape);
-  landscape.scale.set(scale, 1, scale);
-  addLandscape(landscape, { mesh, box, material, wood, green, soil });
+  const pond = mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.06, 32), new THREE.MeshStandardMaterial({color:'#719d98',roughness:.28,metalness:.12}), scene, -1.5, 0.05, 9); pond.scale.z = 0.65;
+  const pondEdge = mesh(new THREE.TorusGeometry(2.55, 0.16, 6, 40), material('#c6b99a'), scene, -1.5, 0.08, 9); pondEdge.rotation.x = Math.PI / 2; pondEdge.scale.y = 0.65;
+  addLandscape(scene, { mesh, box, material, wood, green, soil });
   const network = new THREE.Group(); network.visible = false; scene.add(network);
   const participants = households.filter(h => h.sharing);
-  for (let i = 0; i < participants.length; i++) for (let j = i + 1; j < (large ? Math.min(i + 2, participants.length) : participants.length); j++) {
+  for (let i = 0; i < participants.length; i++) for (let j = i + 1; j < participants.length; j++) {
     const a = participants[i].position, b = participants[j].position;
     const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(a[0], 0.35, a[1]), new THREE.Vector3((a[0] + b[0]) / 2, 2.6, (a[1] + b[1]) / 2), new THREE.Vector3(b[0], 0.35, b[1]));
     const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(40)), new THREE.LineDashedMaterial({ color: '#B8934C', dashSize: 0.3, gapSize: 0.18, transparent: true, opacity: 0.85 }));
@@ -146,10 +139,10 @@ export function createVillage(container, onSelect, onResources = () => {}, house
     pointers.add(event.pointerId);
     if (pointers.size > 1) moved = true;
     else { down = { x: event.clientX, y: event.clientY }; moved = false; }
-  }, { signal: events.signal });
+  });
   renderer.domElement.addEventListener('pointermove', event => {
     if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6) moved = true;
-  }, { signal: events.signal });
+  });
   renderer.domElement.addEventListener('pointerup', event => {
     pointers.delete(event.pointerId);
     if (event.button === 0 && down && !moved && pointers.size === 0) {
@@ -159,13 +152,13 @@ export function createVillage(container, onSelect, onResources = () => {}, house
       else if (hit) onSelect(hit.object.userData.houseId);
     }
     if (pointers.size === 0) down = null;
-  }, { signal: events.signal });
-  renderer.domElement.addEventListener('pointercancel', event => { pointers.delete(event.pointerId); down = null; moved = true; }, { signal: events.signal });
-  window.addEventListener('pointerup', event => { pointers.delete(event.pointerId); if (!pointers.size) down = null; }, { signal: events.signal });
+  });
+  renderer.domElement.addEventListener('pointercancel', event => { pointers.delete(event.pointerId); down = null; moved = true; });
+  window.addEventListener('pointerup', event => { pointers.delete(event.pointerId); if (!pointers.size) down = null; });
   const observer = new ResizeObserver(() => {
     const { width, height } = container.getBoundingClientRect();
     if (!width || !height) return;
-    renderer.setSize(width, height); camera.aspect = width / height; camera.fov = width < 760 ? 65 : 38; camera.updateProjectionMatrix(); needsRender = true;
+    renderer.setSize(width, height); camera.aspect = width / height; camera.fov = width < 760 ? 65 : 38; camera.updateProjectionMatrix();
   }); observer.observe(container);
   // Buildings and planting are static: calculate their shadows once.
   renderer.shadowMap.autoUpdate = false;
@@ -174,16 +167,9 @@ export function createVillage(container, onSelect, onResources = () => {}, house
     if (!container.offsetWidth) return;
     controls.update();
     // Clamp the panning target while preserving the camera offset.
-    const clamped = controls.target.clone(); clamped.x = THREE.MathUtils.clamp(clamped.x, -5 * scale, 5 * scale); clamped.z = THREE.MathUtils.clamp(clamped.z, -5 * scale, 5 * scale); clamped.y = 0;
+    const clamped = controls.target.clone(); clamped.x = THREE.MathUtils.clamp(clamped.x, -5, 5); clamped.z = THREE.MathUtils.clamp(clamped.z, -5, 5); clamped.y = 0;
     camera.position.add(clamped.clone().sub(controls.target)); controls.target.copy(clamped);
-    if (needsRender) { renderer.render(scene, camera); needsRender = false; }
+    renderer.render(scene, camera);
   });
-  function dispose() {
-    events.abort(); observer.disconnect(); controls.dispose(); renderer.setAnimationLoop(null);
-    const geometries = new Set(), materials = new Set(), textures = new Set();
-    scene.traverse(object => { if (object.geometry) geometries.add(object.geometry); if (object.material) for (const mat of Array.isArray(object.material) ? object.material : [object.material]) { materials.add(mat); if (mat.map) textures.add(mat.map); } });
-    geometries.forEach(g=>g.dispose()); textures.forEach(t=>t.dispose()); materials.forEach(m=>m.dispose());
-    renderer.dispose(); renderer.domElement.remove();
-  }
-  return { dispose, reset, select: id => rings.forEach((ring, key) => { ring.visible = key === id; needsRender = true; }), setSharing: visible => { network.visible = visible; needsRender = true; } };
+  return { reset, select: id => rings.forEach((ring, key) => { ring.visible = key === id; }), setSharing: visible => { network.visible = visible; } };
 }
