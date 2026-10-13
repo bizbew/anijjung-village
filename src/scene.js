@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { households } from './households.js';
+import { addLandscape } from './landscape.js';
 
 export function createVillage(container, onSelect, onResources = () => {}) {
   const scene = new THREE.Scene();
@@ -23,26 +24,35 @@ export function createVillage(container, onSelect, onResources = () => {}) {
   const home = new THREE.Vector3(29, 29, 34);
   function reset() { camera.position.copy(home); controls.target.set(0, 0, 0); controls.update(); }
   reset();
-  scene.add(new THREE.HemisphereLight(0xfff7dd, 0x748776, 2.8));
-  const sun = new THREE.DirectionalLight(0xfff6df, 3.2);
-  sun.position.set(-12, 25, 12); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  scene.add(new THREE.HemisphereLight(0xfff7e5, 0x7e9388, 2.1));
+  const sun = new THREE.DirectionalLight(0xffebcd, 2.2);
+  sun.position.set(-10, 22, 10); sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.radius = 4;
   Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22 });
   sun.shadow.normalBias = 0.05; scene.add(sun);
-  const material = color => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
+  const materials = new Map();
+  const material = color => {
+    if (!materials.has(color)) materials.set(color, new THREE.MeshStandardMaterial({ color, roughness: 0.85 }));
+    return materials.get(color);
+  };
   const green = material('#55735a'), roof = material('#234638'), cream = material('#e7d7b5'), wood = material('#a47c50');
   const soil = material('#775c40'), pathMat = material('#d6c39d'), solar = material('#203348');
   function mesh(geometry, mat, parent, x, y, z) {
     const m = new THREE.Mesh(geometry, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
   }
   function box(parent, mat, x, y, z, w, h, d) { return mesh(new THREE.BoxGeometry(w, h, d), mat, parent, x, y, z); }
-  mesh(new THREE.CylinderGeometry(15.5, 15.7, 0.7, 64), material('#bcc49c'), scene, 0, -0.4, 0);
+  mesh(new THREE.CylinderGeometry(15.5, 15.7, 0.7, 64), material('#a6b387'), scene, 0, -0.4, 0);
   mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({ color: '#e2e0cf' }), scene, 0, -0.82, 0).rotation.x = -Math.PI / 2;
   // Footpaths join the central pavilion and the five front doors.
   function path(x, z, endX, endZ) {
-    const length = Math.hypot(endX - x, endZ - z);
-    const p = box(scene, pathMat, (x + endX) / 2, 0.02, (z + endZ) / 2, 1, 0.08, length);
-    p.rotation.y = Math.atan2(endX - x, endZ - z);
+    const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(x,.025,z), new THREE.Vector3(x * .65 + .6,.025,endZ + (z-endZ)*.35), new THREE.Vector3(endX,.025,endZ));
+    const points = curve.getPoints(22);
+    for (let i=0;i<points.length-1;i++) {
+      const a=points[i], b=points[i+1], mid=a.clone().add(b).multiplyScalar(.5);
+      const p=box(scene,pathMat,mid.x,.025,mid.z,.85,.07,a.distanceTo(b)+.06);
+      p.rotation.y=Math.atan2(b.x-a.x,b.z-a.z);
+    }
   }
   const pickable = [], rings = new Map();
   function label(text, parent, x, y, z) {
@@ -57,12 +67,32 @@ export function createVillage(container, onSelect, onResources = () => {}) {
     const [x, z] = h.position;
     const group = new THREE.Group(); group.position.set(x, 0, z); scene.add(group);
     box(group, wood, 0, 0.22, 0, 3.6, 0.4, 2.8);
-    box(group, cream, 0, 1.35, 0, 3.1, 2, 2.4);
+    const index = Number(h.id) - 1;
+    const walls = material(['#e7d7b5','#c4c1a2','#d7b899','#dce0c3','#c5d0bf'][index]);
+    const houseRoof = material(['#234638','#405949','#715447','#3d5660','#4e6046'][index]);
+    box(group, walls, 0, 1.35, 0, 3.1, 2, 2.4);
+    // Raised porch, steps, timber rails and window frames.
+    box(group, wood, 0, .38, 1.85, 3.4, .2, 1.15);
+    for (const px of [-1.45, 1.45]) {
+      box(group,wood,px,.75,2.3,.09,.75,.09);
+      box(group,wood,px,.93,1.85,.08,.08,1);
+    }
+    for (const px of [-1.05,1.05]) box(group,wood,px,.93,2.3,.8,.08,.08);
+    for (let step=0;step<3;step++) box(group,pathMat,0,.08+step*.1,2.95-step*.23,1.05,.16,.28);
+    for (const wx of [-1,1]) {
+      box(group,wood,wx,1.6,1.25,.7,.75,.07);
+      box(group,material('#78928d'),wx,1.6,1.3,.5,.55,.035);
+      box(group,cream,wx,1.6,1.33,.035,.55,.025);
+    }
+    box(group,wood,1.48,.72,1.8,.55,.13,.65);
+    mesh(new THREE.CylinderGeometry(.17,.12,.3,8),material('#b78161'),group,-1.1,.63,2);
+    mesh(new THREE.IcosahedronGeometry(.25,0),green,group,-1.1,.92,2);
+    for(let plank=0;plank<5;plank++) box(group,wood,-1.565,.7+plank*.29,0,.035,.025,2.25);
     box(group, wood, 0, 0.85, 1.22, 0.7, 1.25, 0.08);
-    for (const wx of [-1, 1]) box(group, solar, wx, 1.6, 1.22, 0.55, 0.6, 0.07);
+
     // Two sloping roof faces meeting at the ridge.
     for (const side of [-1, 1]) {
-      const r = box(group, roof, 0, 2.6, side * 0.72, 3.8, 0.16, 1.85);
+      const r = box(group, houseRoof, 0, 2.6, side * 0.72, 3.8, 0.16, 1.85);
       r.rotation.x = side * 0.48;
     }
     for (const sx of [-0.8, 0.25]) {
@@ -73,12 +103,12 @@ export function createVillage(container, onSelect, onResources = () => {}) {
     }
     mesh(new THREE.CylinderGeometry(0.48, 0.48, 1.35, 12), material('#819997'), group, 2.25, 0.68, 0);
     mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.1, 12), solar, group, 2.25, 1.38, 0);
-    box(group, pathMat, 0, 0.12, 1.8, 1.2, 0.2, 0.7);
+
     label(`บ้าน ${h.id}`, group, 0, 3.7, 0);
     const ring = mesh(new THREE.RingGeometry(2.4, 2.58, 48), new THREE.MeshBasicMaterial({ color: '#B8934C', side: THREE.DoubleSide }), scene, x, 0.09, z);
-    ring.rotation.x = -Math.PI / 2; ring.visible = false; rings.set(h.id, ring);
+    ring.castShadow = false; ring.rotation.x = -Math.PI / 2; ring.visible = false; rings.set(h.id, ring);
     group.traverse(child => { if (child.isMesh) { child.userData.houseId = h.id; pickable.push(child); } });
-    path(x, z + 2, 0, 1);
+    path(x, z + 3, 0, 1);
     for (let bed = 0; bed < 2; bed++) {
       box(group, wood, -1.2 + bed * 1.3, 0.15, -2.6, 1, 0.25, 1.4);
       box(group, soil, -1.2 + bed * 1.3, 0.28, -2.6, 0.85, 0.05, 1.25);
@@ -92,13 +122,9 @@ export function createVillage(container, onSelect, onResources = () => {}) {
   box(scene, wood, 0, 0.65, 1, 1.4, 0.15, 0.85);
   label('ศาลา · แหล่งเรียนรู้', scene, 0, 4, 1);
   pavilionRoof.userData.resources = true; pickable.push(pavilionRoof);
-  const pond = mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.06, 32), material('#789d9b'), scene, -1.5, 0.05, 9); pond.scale.z = 0.65;
+  const pond = mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.06, 32), new THREE.MeshStandardMaterial({color:'#719d98',roughness:.28,metalness:.12}), scene, -1.5, 0.05, 9); pond.scale.z = 0.65;
   const pondEdge = mesh(new THREE.TorusGeometry(2.55, 0.16, 6, 40), material('#c6b99a'), scene, -1.5, 0.08, 9); pondEdge.rotation.x = Math.PI / 2; pondEdge.scale.y = 0.65;
-  for (const [x, z, scale] of [[-11, 1, 1.2], [-10, -7, 1], [10, -7, 1.3], [11, 3, 1], [3, 11, 1.1], [-9, 8, 1.2], [3, -11, 1]]) {
-    mesh(new THREE.CylinderGeometry(0.15, 0.23, 1.8 * scale, 6), wood, scene, x, 0.9 * scale, z);
-    mesh(new THREE.IcosahedronGeometry(1.1 * scale, 1), green, scene, x, 2.2 * scale, z);
-    mesh(new THREE.IcosahedronGeometry(0.85 * scale, 0), material('#789066'), scene, x + 0.45, 2.6 * scale, z);
-  }
+  addLandscape(scene, { mesh, box, material, wood, green, soil });
   const network = new THREE.Group(); network.visible = false; scene.add(network);
   const participants = households.filter(h => h.sharing);
   for (let i = 0; i < participants.length; i++) for (let j = i + 1; j < participants.length; j++) {
@@ -133,6 +159,9 @@ export function createVillage(container, onSelect, onResources = () => {}) {
     const { width, height } = container.getBoundingClientRect();
     renderer.setSize(width, height); camera.aspect = width / height; camera.fov = width < 760 ? 65 : 38; camera.updateProjectionMatrix();
   }); observer.observe(container);
+  // Buildings and planting are static: calculate their shadows once.
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
   renderer.setAnimationLoop(() => {
     controls.update();
     // Clamp the panning target while preserving the camera offset.
