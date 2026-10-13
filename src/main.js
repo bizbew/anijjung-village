@@ -3,14 +3,19 @@ import { setupResources } from './resources-ui.js';
 import { waterReserveDays } from './households.js';
 import { loadNetwork, networkHouseholds } from './network-store.js';
 import { setupNetworkPages, escape } from './network-pages.js';
-import { createVillage } from './scene.js';
-const households = networkHouseholds(loadNetwork());
+import { getGroups, getGroupHouseholds } from './groups.js';
+import { setupOverview } from './overview.js';
+let households = [];
+let selectedGroup = null;
+let sceneVersion = 0;
 
 const app = document.querySelector('#app');
 app.innerHTML = `
   <nav class="site-nav" aria-label="เมนูหลัก"><a class="nav-brand" href="#">ANIJJUNG NETWORK</a><button id="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="เปิดเมนู">☰</button><div id="nav-links"><a href="#who-we-are">WHO WE ARE</a><a href="#join">JOIN A NETWORK</a><a href="#sharing">SHARING</a></div></nav>
+  <main id="overview" class="network-page overview"></main>
   <main id="network-page" class="network-page" hidden></main>
-  <main class="explorer">
+  <main class="explorer" hidden>
+    <a class="village-back" href="#">← กลับภาพรวมเครือข่าย</a><p id="active-group" class="active-group"></p>
     <div id="scene" role="region" aria-label="ฉากหมู่บ้านจำลองสามมิติ"></div>
     <header class="intro"><div class="eyebrow"><span></span> ANIJJUNG / CONCEPT 01</div>
       <h1>Anijjung<br>Village Explorer</h1>
@@ -50,14 +55,47 @@ function closeDetails() {
   village?.select(null);
   document.querySelectorAll('[data-house]').forEach(b => b.setAttribute('aria-pressed', 'false'));
 }
-try { village = createVillage(document.querySelector('#scene'), selectHouse, resourcePanel.open, households); }
-catch (error) { console.error(error); document.querySelector('#fallback').hidden = false; }
 document.querySelector('#reset').onclick = () => village?.reset();
 document.querySelector('#sharing').onchange = event => {
   village?.setSharing(event.target.checked);
   document.querySelector('#network-note').hidden = !event.target.checked;
 };
-document.querySelectorAll('[data-house]').forEach(button => button.onclick = () => selectHouse(button.dataset.house));
+document.querySelector('.house-list').onclick = event => { const button = event.target.closest('[data-house]'); if (button) selectHouse(button.dataset.house); };
 document.addEventListener('keydown', event => { if (event.key === 'Escape') { closeDetails(); resourcePanel.close(); } });
 
 setupNetworkPages();
+
+const overview = setupOverview();
+async function showGroupRoute() {
+  const id = location.hash.startsWith('#village/') ? location.hash.slice(9) : null;
+  const group = getGroups(loadNetwork()).find(g=>g.id === id);
+  const isPage = ['#who-we-are','#join','#sharing'].includes(location.hash);
+  document.querySelector('#overview').hidden = Boolean(group) || isPage;
+  document.querySelector('.explorer').hidden = !group;
+  if (!group) {
+    sceneVersion++;
+    village?.dispose(); village = null; selectedGroup = null;
+    closeDetails(); resourcePanel.close(false);
+    if (!isPage) { overview.render(); document.title = 'ภาพรวมเครือข่าย · Anijjung'; }
+    return;
+  }
+  if (selectedGroup !== id) {
+    const version = ++sceneVersion;
+    village?.dispose(); village = null;
+    selectedGroup = id; households = getGroupHouseholds(id, loadNetwork());
+    closeDetails(); resourcePanel.close(false);
+    document.querySelector('#sharing').checked = false; document.querySelector('#network-note').hidden = true;
+    document.querySelector('#fallback').hidden = true;
+    document.querySelector('.house-list').innerHTML = households.map(h=>`<button data-house="${h.id}" aria-label="ดูรายละเอียดบ้าน ${h.id}">${h.id}</button>`).join('');
+    document.querySelector('#active-group').textContent = `${group.name} · ${households.length} หลัง · ผังสมมติ`;
+    try {
+      const { createVillage } = await import('./scene.js');
+      if (version !== sceneVersion || selectedGroup !== id || location.hash !== `#village/${id}`) return;
+      village = createVillage(document.querySelector('#scene'), selectHouse, resourcePanel.open, households);
+    }
+    catch (error) { console.error(error); document.querySelector('#fallback').hidden = false; }
+  }
+  document.title = `${group.name} · Anijjung`;
+}
+window.addEventListener('hashchange',showGroupRoute);
+showGroupRoute();

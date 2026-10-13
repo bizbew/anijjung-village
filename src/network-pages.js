@@ -35,7 +35,7 @@ export function setupNetworkPages() {
         const form = new FormData(event.target); const member = { id: String(data.members.length+6).padStart(2,'0'), name: form.get('name').trim(), area: form.get('area').trim(), contact: form.get('contact').trim(), residents: Number(form.get('residents')), sharing: form.get('sharing') === 'yes' };
         if (!member.name || !member.area || !member.contact) return status('กรุณากรอกชื่อ พื้นที่ และช่องทางติดต่อ');
         for (const key of ['waterLitres','dailyWaterLitres','foodDays','solarKwh','electricityKwh']) member[key] = form.get(key) === '' ? null : Number(form.get(key));
-        if (persist({...data,members:[...data.members,member]})) { location.hash = ''; location.reload(); }
+        if (persist({...data,members:[...data.members,member]})) { location.hash = '#village/local'; location.reload(); }
       };
     } else renderSharing(content);
     page.querySelector('h1').focus({preventScroll:true}); window.scrollTo(0,0);
