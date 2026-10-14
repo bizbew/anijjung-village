@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-เปิด URL ที่ terminal แสดง โดยปกติคือ http://localhost:5173 บนเครื่องของคุณเอง URL localhost ของเครื่อง Cloud ไม่สามารถเปิดจากคอมพิวเตอร์ของคุณได้โดยตรง ต้นแบบนี้ยังไม่ได้ deploy เป็นเว็บไซต์สาธารณะ
+เปิด URL ที่ terminal แสดง โดยปกติคือ http://localhost:5173 บนเครื่องของคุณเอง URL localhost ของเครื่อง Cloud ไม่สามารถเปิดจากคอมพิวเตอร์ของคุณได้โดยตรง ดูขั้นตอนเผยแพร่เว็บไซต์ในหัวข้อ GitHub Pages ด้านล่าง
 
 ```sh
 npm run build
@@ -74,3 +74,15 @@ npm run preview
 แก้หน้าและฟอร์มใน `src/network-pages.js` แก้ schema และการบันทึกใน `src/network-store.js` ส่วนบ้านตัวอย่างอยู่ใน `src/households.js` และตำแหน่งบ้านใหม่อยู่ใน `slots` ของ network-store.js
 
 ตรวจด้วยตนเอง: เปิดเมนูทั้งสาม เพิ่มบ้านพร้อมเลือกความสนใจ กลับหน้าแรกและรีเฟรช ตรวจบ้านใหม่และข้อมูลที่ไม่ทราบ เพิ่มรายการราคา 0 และราคามากกว่า 0 ทดลองขอจำนวนไม่เกินที่เสนอ ตรวจยอดประมาณการ และรีเฟรชเพื่อดูคำขอที่บันทึกไว้ บนมือถือใช้เมนู ☰
+
+## GitHub Pages
+
+เว็บไซต์เตรียม deploy ที่ https://bizbew.github.io/anijjung-village/ โดย GitHub Actions จะติดตั้ง dependencies ทดสอบ build และ deploy ไฟล์ใน `dist` เมื่อ push ไป `main` หรือสั่ง Run workflow ด้วยตนเอง ไม่ใช้ source บน branch เป็นเว็บไซต์โดยตรง
+
+ตั้งค่าใน repository ครั้งแรก: **Settings → Pages → Build and deployment → Source → GitHub Actions** จากนั้นเปิด **Actions → Deploy to GitHub Pages** เพื่อตรวจผล หาก workflow ก่อนหน้าล้มเหลวเพราะยังไม่ได้เลือก Source ให้กด **Re-run all jobs** หลังตั้งค่าแล้ว ตรวจว่า repository อนุญาต Actions และการ deploy จาก branch `main` ใน environment `github-pages`
+
+`vite.config.js` ตั้ง base path สำหรับ production เป็น `/anijjung-village/` ส่วน `npm run dev` ยังเปิดที่ root ตามเดิม เมนูใช้ hash routes จึงไม่ต้องมี server rewrite สำหรับหน้าย่อย
+
+ตรวจ production บนเครื่อง: `npm run build` แล้ว `npm run preview` จากนั้นเปิด URL ที่ terminal แสดง ตามด้วย `/anijjung-village/` หากเปลี่ยนชื่อ repository หรือใช้ custom domain ต้องปรับ base path ให้ตรง URL ใหม่
+
+ข้อมูล localStorage ของ localhost และ GitHub Pages แยกกัน บ้านและรายการที่เพิ่มในเครื่องจะไม่ตามไปยังเว็บไซต์ และข้อมูลแต่ละผู้ใช้ยังไม่แชร์กัน
