@@ -1,4 +1,5 @@
 import './style.css';
+import logoUrl from '../logo.png';
 import { setupResources } from './resources-ui.js';
 import { waterReserveDays } from './households.js';
 import { loadNetwork, networkHouseholds } from './network-store.js';
@@ -8,13 +9,13 @@ const households = networkHouseholds(loadNetwork());
 
 const app = document.querySelector('#app');
 app.innerHTML = `
-  <nav class="site-nav" aria-label="เมนูหลัก"><a class="nav-brand" href="#">ANIJJUNG NETWORK</a><button id="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="เปิดเมนู">☰</button><div id="nav-links"><a href="#who-we-are">WHO WE ARE</a><a href="#join">JOIN A NETWORK</a><a href="#sharing">SHARING</a></div></nav>
+  <nav class="site-nav" aria-label="เมนูหลัก"><a class="nav-brand" href="#"><img class="site-logo" src="${logoUrl}" alt="โลโก้ Anijjung Network" width="36" height="36"><span>ANIJJUNG NETWORK</span></a><button id="nav-toggle" aria-expanded="false" aria-controls="nav-links" aria-label="เปิดเมนู">☰</button><div id="nav-links"><a href="#who-we-are">WHO WE ARE</a><a href="#join">JOIN A NETWORK</a><a href="#sharing">SHARING</a></div></nav>
   <main id="network-page" class="network-page" hidden></main>
   <main class="explorer">
     <div id="scene" role="region" aria-label="ฉากหมู่บ้านจำลองสามมิติ"></div>
-    <header class="intro"><div class="eyebrow"><span></span> ANIJJUNG / CONCEPT 01</div>
+    <header class="intro">
       <h1>Anijjung<br>Village Explorer</h1>
-      <p class="subtitle">สำรวจหมู่บ้านจำลองเพื่อวางแผนอาหาร น้ำ และพลังงาน</p>
+      <p class="subtitle">สำรวจความมั่นคงด้าน อาหาร น้ำ และพลังงาน ของแต่บ้าน เพื่อเสริมความแข็งแกร่งด้วยเครือข่ายแบ่งปันของเรา</p>
       <p class="concept">ต้นแบบแนวคิด • หมู่บ้านจำลอง • บ้านเริ่มต้นใช้ข้อมูลจำลอง</p>
     </header>
     <div class="toolbar"><button id="open-resources" aria-controls="resources" aria-expanded="false">แหล่งช่วยเหลือและเรียนรู้</button><label class="toggle"><input id="sharing" type="checkbox"><span class="switch"></span>แสดงเครือข่ายแบ่งปัน</label><button id="reset">↺ กลับมุมเริ่มต้น</button></div>
