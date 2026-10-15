@@ -1,3 +1,4 @@
+import { aboutPage } from './about-page.js';
 import { provinces, districtsFor, resolveLocation } from './thai-locations.js';
 import { estimateHelp } from './estimate-help.js';
 import { loadNetwork, saveNetwork, networkHouseholds, slots, validateRequest } from './network-store.js';
@@ -19,6 +20,7 @@ export function setupNetworkPages() {
   function route() {
     const name = location.hash.slice(1);
     const active = ['who-we-are','join','sharing'].includes(name);
+    page.classList.toggle('about-page', name === 'who-we-are');
     explorer.hidden = active; page.hidden = !active;
     document.querySelectorAll('.site-nav a').forEach(a => { if (a.hash === location.hash && active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
     document.querySelector('#nav-links').classList.remove('expanded');document.querySelector('#nav-toggle').setAttribute('aria-expanded','false');
@@ -26,10 +28,14 @@ export function setupNetworkPages() {
     data = loadNetwork();
     const titles = { 'who-we-are': 'รู้จัก Anijjung Network', join: 'เข้าร่วม Anijjung Network', sharing: 'พื้นที่แบ่งปันทรัพยากร' };
     document.title = `${titles[name]} · Anijjung`;
-    page.innerHTML = `<a class="back-link" href="#">← กลับไปสำรวจหมู่บ้าน</a><h1 tabindex="-1">${titles[name]}</h1>${localNote}<div id="page-content"></div><p id="form-status" role="status" aria-live="polite"></p>`;
+    page.innerHTML = `<a class="back-link" href="#">← กลับไปสำรวจหมู่บ้าน</a>${name === 'who-we-are' ? '' : `<h1 tabindex="-1">${titles[name]}</h1>${localNote}`}<div id="page-content"></div><p id="form-status" role="status" aria-live="polite"></p>`;
     const content = page.querySelector('#page-content');
     if (name === 'who-we-are') {
-      content.innerHTML = `<section class="about-card"><p class="eyebrow">อาหาร · น้ำ · พลังงาน · การแบ่งปันโดยสมัครใจ</p><h2>เริ่มจากบ้าน เชื่อมถึงชุมชน</h2><p>Anijjung Network เป็นแนวคิดเครือข่ายครัวเรือนในประเทศไทย ที่ช่วยสำรวจและวางแผนทรัพยากรด้านอาหาร น้ำ และพลังงาน พร้อมเชื่อมผู้ที่สนใจแบ่งปันทรัพยากรโดยสมัครใจ</p><p>หมู่บ้าน 3D เป็นผังสมมติเพื่อการเรียนรู้ บ้านเริ่มต้นทั้งห้าหลังใช้ข้อมูลจำลอง ส่วนบ้านที่คุณเพิ่มใช้ข้อมูลที่คุณกรอก ไม่ใช่ตำแหน่งจริงหรือผังรับรองทางวิศวกรรม</p><div class="about-grid"><article><h3>รู้จักทรัพยากรของบ้าน</h3><p>บันทึกข้อมูลที่มี เว้นช่องที่ยังไม่ทราบ แล้วสำรวจวันสำรองน้ำตามการใช้รวมของครัวเรือน</p></article><article><h3>เลือกแบ่งปันด้วยตัวเอง</h3><p>ความสนใจแบ่งปันไม่เท่ากับทรัพยากรพร้อมแจก ต้องสร้างรายการและระบุจำนวนกับเงื่อนไขแยกต่างหาก</p></article><article><h3>เรียนรู้ร่วมกัน</h3><p>เข้าถึงแหล่งความรู้ด้านอาหาร น้ำ และพลังงานจากหน้าแรก โดยตรวจสอบบริการกับหน่วยงานก่อน</p></article></div><p>ต้นแบบนี้ไม่ยืนยันคุณภาพน้ำ ความพร้อมเมื่อไฟดับ หรือระดับการพึ่งตนเอง และยังไม่ใช่บริการรับคำขอจริง</p><a class="primary-link" href="#join">เริ่มเพิ่มครัวเรือน →</a></section>`;
+      content.innerHTML = aboutPage();
+      content.querySelector('a[href="#about-story"]').onclick = event => {
+        event.preventDefault();
+        content.querySelector('#about-story').scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      };
     } else if (name === 'join') {
       content.innerHTML = `<form id="join-form" class="network-form"><h2>ข้อมูลครัวเรือน</h2><p>ผังทดลองรองรับบ้านเพิ่ม ${slots.length} หลัง (เพิ่มแล้ว ${data.members.length}) ตำแหน่งจัดให้อัตโนมัติในผังจำลอง</p><div class="form-grid">${field('name','ชื่อครัวเรือน','text','required maxlength="80"')}${field('residents','จำนวนสมาชิก (คน)','number','required min="1" max="100" step="1"')}<label for="join-province">จังหวัด<select id="join-province" name="provinceId" required><option value="">เลือกจังหวัด</option>${provinces.map(p=>`<option value="${p.id}">${escape(p.name)}</option>`).join('')}</select></label><label for="join-district">อำเภอ / เขต<select id="join-district" name="districtId" required disabled><option value="">เลือกจังหวัดก่อน</option></select></label>${field('contact','ช่องทางติดต่อ (เก็บไว้เฉพาะในเบราว์เซอร์)','text','required maxlength="160"')}</div><h3>ทรัพยากรของบ้าน · เว้นว่างได้ถ้ายังไม่ทราบ</h3><p>ข้อมูลประเมินด้วยตนเอง ค่าจริงอาจต่างจากประมาณการตามการใช้และฤดูกาล กด i ข้างแต่ละหัวข้อเพื่อดูวิธีประมาณค่า</p><div class="form-grid">${optionalNumber('waterLitres','น้ำที่เก็บไว้ (ลิตร)')}${optionalNumber('dailyWaterLitres','ใช้น้ำรวมทั้งครัวเรือน (ลิตร/วัน)')}${optionalNumber('foodDays','อาหารสำรอง (วัน)')}${optionalNumber('solarKwh','ผลิตไฟฟ้าโซลาร์ (kWh/วัน)')}${optionalNumber('electricityKwh','ใช้ไฟฟ้ารวม (kWh/วัน)')}</div><fieldset><legend>ความสนใจแบ่งปันทรัพยากร</legend><label class="check-field"><input type="radio" name="sharing" value="yes" required>สนใจแบ่งปัน</label><label class="check-field"><input type="radio" name="sharing" value="no" checked>ยังไม่เปิดแบ่งปัน</label></fieldset>${consent}<button class="primary-button" ${data.members.length >= slots.length ? 'disabled' : ''}>บันทึกและเพิ่มบ้านในหน้าแรก</button>${data.members.length >= slots.length ? '<p>ครบพื้นที่ผังทดลองแล้ว ยังดูบ้านและสร้างรายการแบ่งปันได้</p>' : ''}</form>`;
       const provinceSelect = page.querySelector('#join-province');
