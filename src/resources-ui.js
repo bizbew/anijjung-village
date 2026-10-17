@@ -21,6 +21,7 @@ export function setupResources(onOpen) {
     <label class="resource-search">ค้นหาชื่อ พื้นที่ หรือเรื่องที่ต้องการ<input id="resource-search" type="search" placeholder="เช่น เชียงใหม่ โซลาร์ ตรวจดิน"></label>
     <label class="resource-province">จังหวัดที่เกี่ยวข้องตามข้อมูลต้นทาง<select id="resource-province"><option value="">ทุกจังหวัด / ส่วนกลาง</option>${resourceProvinces(resources).map(p => `<option value="${escape(p)}">${escape(p)}</option>`).join('')}</select></label>
     <p class="resource-filter-note">จังหวัดที่ระบุไม่ยืนยันว่าครอบคลุมทุกพื้นที่ โปรดตรวจขอบเขตบริการของแต่ละแห่ง รายการเดิมที่ยังไม่ระบุจังหวัดจะแสดงเมื่อเลือกทุกจังหวัด</p>
+    <a class="resource-return" id="resource-return" href="#survey" hidden>← กลับผลสำรวจบ้านฉัน</a><p id="resource-context" class="resource-context" hidden></p>
     <p id="resource-count" role="status" aria-live="polite"></p><div id="resource-list"></div><button id="resource-more" class="resource-more" hidden>แสดงเพิ่มเติม</button>`;
   const search = panel.querySelector('#resource-search');
   function render() {
@@ -66,5 +67,21 @@ export function setupResources(onOpen) {
   panel.querySelector('#resource-province').onchange = () => { visibleCount = pageSize; render(); };
   panel.querySelector('#resource-more').onclick = () => { visibleCount += pageSize; render(); };
   render();
-  return { open, close };
+  function openFiltered({ category: nextCategory = 'น้ำ', province = '', query = '', topicLabel = 'น้ำ', returnHref = '#survey' } = {}) {
+    category = nextCategory;
+    panel.querySelectorAll('[data-category]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.category === category)));
+    const provinceField = panel.querySelector('#resource-province');
+    provinceField.value = province;
+    if (provinceField.value !== province) provinceField.value = '';
+    search.value = query;
+    const hasSpecific = filterResources(resources, { category, province: provinceField.value, query }).length > 0;
+    if (!hasSpecific) search.value = '';
+    visibleCount = pageSize; render();
+    const context = panel.querySelector('#resource-context'); context.hidden = false;
+    context.textContent = `${hasSpecific ? 'แหล่งข้อมูลที่เกี่ยวข้องกับคำค้น' : 'ไม่พบรายการตรงเรื่องที่เลือก จึงแสดงหน่วยงานน้ำทั้งหมดในพื้นที่'}: ${topicLabel} · ${provinceField.value || 'ทุกจังหวัด / ส่วนกลาง'} จังหวัดอ้างอิงจากตาราง ไม่ยืนยันบริการจริงหรือความร่วมมือ กรุณาตรวจขอบเขตและติดต่อก่อน`;
+    const back = panel.querySelector('#resource-return'); back.hidden = false; back.href = returnHref;
+    back.onclick = () => close(false);
+    open();
+  }
+  return { open, close, openFiltered };
 }

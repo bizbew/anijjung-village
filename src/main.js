@@ -16,6 +16,7 @@ app.innerHTML = `
     <header class="intro">
       <h1>Anijjung<br>Village Explorer</h1>
       <p class="subtitle">สำรวจความมั่นคงด้าน อาหาร น้ำ และพลังงาน ของแต่บ้าน เพื่อเสริมความแข็งแกร่งด้วยเครือข่ายแบ่งปันของเรา</p>
+      <a class="survey-start" href="#survey">สำรวจบ้านฉัน →</a><br>
       <p class="concept">ต้นแบบแนวคิด • หมู่บ้านจำลอง • บ้านเริ่มต้นใช้ข้อมูลจำลอง</p>
     </header>
     <div class="toolbar"><button id="open-resources" aria-controls="resources" aria-expanded="false">แหล่งช่วยเหลือและเรียนรู้</button><label class="toggle"><input id="sharing" type="checkbox"><span class="switch"></span>แสดงเครือข่ายแบ่งปัน</label><button id="reset">↺ กลับมุมเริ่มต้น</button></div>
@@ -61,4 +62,9 @@ document.querySelector('#sharing').onchange = event => {
 document.querySelectorAll('[data-house]').forEach(button => button.onclick = () => selectHouse(button.dataset.house));
 document.addEventListener('keydown', event => { if (event.key === 'Escape') { closeDetails(); resourcePanel.close(); } });
 
-setupNetworkPages();
+setupNetworkPages({ openWaterResources(options) {
+  resourcePanel.close(false);
+  const open = () => resourcePanel.openFiltered(options);
+  if (location.hash === '') open();
+  else { window.addEventListener('hashchange', open, { once: true }); location.hash = ''; }
+} });

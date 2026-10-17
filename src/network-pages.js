@@ -1,3 +1,4 @@
+import { createWaterSurvey, takeAssessmentJoinDraft } from './water-survey.js';
 import { aboutPage } from './about-page.js';
 import { provinces, districtsFor, resolveLocation } from './thai-locations.js';
 import { estimateHelp } from './estimate-help.js';
@@ -8,7 +9,8 @@ const field = (name,label,type='text',extra='required',value='') => `<label>${la
 const optionalNumber = (name,label) => `<div class="metric-field"><div class="metric-label"><label for="join-${name}">${label}</label><button type="button" class="info-button" data-estimate="${name}" aria-label="วิธีประมาณค่า ${label}" aria-expanded="false" aria-controls="help-${name}">i</button></div><p class="estimate-note" id="help-${name}" hidden>${escape(estimateHelp[name])}</p><input id="join-${name}" name="${name}" type="number" min="0" max="10000000" step="any" aria-describedby="help-${name}"></div>`;
 const localNote = '<p class="local-note">ต้นแบบทดลอง · บันทึกเฉพาะเบราว์เซอร์นี้ ไม่ส่งข้อมูลให้เครือข่ายหรือบุคคลอื่น ยังไม่มีบัญชีสมาชิกหรือระบบชำระเงิน</p>';
 const consent = '<label class="check-field"><input type="checkbox" name="consent" required>ยินยอมบันทึกข้อมูลในเบราว์เซอร์นี้และแสดงชื่อครัวเรือนกับพื้นที่โดยประมาณ ช่องทางติดต่อไม่แสดงในรายการสาธารณะ</label>';
-export function setupNetworkPages() {
+export function setupNetworkPages({ openWaterResources = () => {} } = {}) {
+  const survey = createWaterSurvey(openWaterResources);
   const page = document.querySelector('#network-page');
   const explorer = document.querySelector('.explorer');
   let data = loadNetwork();
@@ -19,18 +21,20 @@ export function setupNetworkPages() {
   }
   function route() {
     const name = location.hash.slice(1);
-    const active = ['who-we-are','join','sharing'].includes(name);
+    const active = ['who-we-are','join','sharing','survey'].includes(name);
     page.classList.toggle('about-page', name === 'who-we-are');
     explorer.hidden = active; page.hidden = !active;
     document.querySelectorAll('.site-nav a').forEach(a => { if (a.hash === location.hash && active) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
     document.querySelector('#nav-links').classList.remove('expanded');document.querySelector('#nav-toggle').setAttribute('aria-expanded','false');
     if (!active) { document.title = 'Anijjung Village Explorer'; return; }
     data = loadNetwork();
-    const titles = { 'who-we-are': 'รู้จัก Anijjung Network', join: 'เข้าร่วม Anijjung Network', sharing: 'พื้นที่แบ่งปันทรัพยากร' };
+    const titles = { 'who-we-are': 'รู้จัก Anijjung Network', join: 'เข้าร่วม Anijjung Network', sharing: 'พื้นที่แบ่งปันทรัพยากร', survey: 'สำรวจบ้านฉัน' };
     document.title = `${titles[name]} · Anijjung`;
     page.innerHTML = `<a class="back-link" href="#">← กลับไปสำรวจหมู่บ้าน</a>${name === 'who-we-are' ? '' : `<h1 tabindex="-1">${titles[name]}</h1>${localNote}`}<div id="page-content"></div><p id="form-status" role="status" aria-live="polite"></p>`;
     const content = page.querySelector('#page-content');
-    if (name === 'who-we-are') {
+    if (name === 'survey') {
+      survey.mount(content);
+    } else if (name === 'who-we-are') {
       content.innerHTML = aboutPage();
       content.querySelector('a[href="#about-story"]').onclick = event => {
         event.preventDefault();
@@ -49,6 +53,18 @@ export function setupNetworkPages() {
         const help = page.querySelector(`#help-${button.dataset.estimate}`);
         help.hidden = !help.hidden; button.setAttribute('aria-expanded', String(!help.hidden));
       });
+      const surveyDraft = takeAssessmentJoinDraft();
+      if (surveyDraft) {
+        const joinForm = page.querySelector('#join-form');
+        joinForm.elements.residents.value = surveyDraft.residents ?? '';
+        provinceSelect.value = surveyDraft.provinceId; provinceSelect.onchange();
+        districtSelect.value = surveyDraft.districtId;
+        joinForm.elements.waterLitres.value = surveyDraft.waterLitres ?? '';
+        joinForm.elements.dailyWaterLitres.value = surveyDraft.dailyWaterLitres ?? '';
+        const notice = document.createElement('p'); notice.className = 'local-note';
+        notice.textContent = 'เติมข้อมูลจากการสำรวจแล้ว โปรดตรวจและกรอกส่วนที่เหลือ ยังไม่บันทึกบ้าน และยังไม่เปิดแบ่งปัน';
+        joinForm.prepend(notice);
+      }
       page.querySelector('#join-form').onsubmit = event => {
         event.preventDefault(); if (data.members.length >= slots.length) return;
         const form = new FormData(event.target);
